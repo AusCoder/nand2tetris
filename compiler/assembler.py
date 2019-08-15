@@ -253,14 +253,14 @@ def gen_machine_code(
             raise RuntimeError(f"Unexpected instruction: {instruction}")
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("input", type=str)
     parser.add_argument("-o", "--output", help="output path", type=str)
     return parser.parse_args()
 
 
-def main(args):
+def main(args: argparse.Namespace):
     input_filepath = Path(args.input)
     if args.output is None:
         output_filepath = input_filepath.parent.joinpath(f"{input_filepath.stem}.hack")
