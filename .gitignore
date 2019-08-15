@@ -1,0 +1,8 @@
+*.dat
+.vscode
+__pycache__
+venv
+*.hack
+*.out
+*.cmp
+*.tst
