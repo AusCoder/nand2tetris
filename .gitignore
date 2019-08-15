@@ -6,3 +6,5 @@ venv
 *.out
 *.cmp
 *.tst
+tools
+projects/06
