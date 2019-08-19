@@ -16,6 +16,12 @@ class CommandType(Enum):
     ARITHMETIC = 1
     PUSH = 2
     POP = 3
+    LABEL = 4
+    GOTO = 5
+    IFGOTO = 6
+    FUNCTION = 7
+    CALL = 8
+    RETURN = 9
 
 
 class ParseError(Exception):
@@ -29,6 +35,8 @@ class InvalidArgumentError(Exception):
 class Parser:
     # End of line with comments regex
     _re_eol = r"\s*(//.*)?\n$"
+    # Empty or commented line
+    _re_none_line = rf"^{_re_eol}"
     # Arithmetic commands regex
     _re_arithmetic = rf"\s*(add|sub|neg|eq|gt|lt|and|or|not){_re_eol}"
     # Push and pop command regexes
@@ -36,8 +44,20 @@ class Parser:
     _re_argument = r"(\d+)"
     _re_push = rf"\s*push\s+{_re_memory_segment}\s+{_re_argument}{_re_eol}"
     _re_pop = rf"\s*pop\s+{_re_memory_segment}\s+{_re_argument}{_re_eol}"
-    # Empty or commented line
-    _re_none_line = rf"^{_re_eol}"
+    # Symbol name regex
+    _re_symbol = r"([a-zA-Z][a-zA-Z\d_\.$]*)"
+    # Label regex
+    _re_label = rf"\s*label\s+{_re_symbol}{_re_eol}"
+    # Goto regex
+    _re_goto = rf"\s*goto\s+{_re_symbol}{_re_eol}"
+    # If-goto regex
+    _re_if_goto = rf"\s*if-goto\s+{_re_symbol}{_re_eol}"
+    # Function regex
+    _re_function = rf"\s*function\s+{_re_symbol}\s+(\d+){_re_eol}"
+    # Call regex
+    _re_call = rf"\s*call\s+{_re_symbol}\s+(\d+){_re_eol}"
+    # Return regex
+    _re_return = r"\s*return{_re_eol}"
 
     _regexs = [
         (re.compile(r), c)
@@ -45,6 +65,12 @@ class Parser:
             (_re_arithmetic, CommandType.ARITHMETIC),
             (_re_push, CommandType.PUSH),
             (_re_pop, CommandType.POP),
+            (_re_label, CommandType.LABEL),
+            (_re_goto, CommandType.GOTO),
+            (_re_if_goto, CommandType.IFGOTO),
+            (_re_function, CommandType.FUNCTION),
+            (_re_call, CommandType.CALL),
+            (_re_return, CommandType.RETURN),
             (_re_none_line, CommandType.NONE),
         ]
     ]
@@ -70,20 +96,34 @@ class Parser:
             if not m:
                 continue
             if command_type == CommandType.NONE:
+                _, = m.groups()
+                self._current_arguments = (None, None)
                 return command_type
             elif command_type == CommandType.ARITHMETIC:
                 argument, _ = m.groups()
                 self._current_arguments = (argument, None)
                 return command_type
-            elif command_type == CommandType.PUSH or command_type == CommandType.POP:
+            elif command_type in [CommandType.PUSH, CommandType.POP]:
                 memory_segment, argument, _ = m.groups()
                 self._current_arguments = (memory_segment, int(argument))
+                return command_type
+            elif command_type in [CommandType.LABEL, CommandType.GOTO, CommandType.IFGOTO]:
+                label, _ = m.groups()
+                self._current_arguments = (label, None)
+                return command_type
+            elif command_type in [CommandType.FUNCTION, CommandType.CALL]:
+                label, num_args_or_locals, _ = m.groups()
+                self._current_arguments = (label, int(num_args_or_locals))
+                return command_type
+            elif command_type == CommandType.RETURN:
+                _, = m.groups()
+                self._current_arguments = (None, None)
                 return command_type
             else:
                 raise RuntimeError(f"Unexpected command type: {command_type}")
         raise ParseError(f"Line {self._current_line_num}:'{self._current_line}'")
 
-    def arguments(self) -> Tuple[str, Optional[int]]:
+    def arguments(self) -> Tuple[Optional[str], Optional[int]]:
         return self._current_arguments
 
 
@@ -119,16 +159,6 @@ class CodeGenerator:
         lines.extend(["@SP", "A=M-1", op])
         return lines
 
-    def _generate_unary_op(self, lines: List[str], argument: str) -> List[str]:
-        if argument == "neg":
-            op = "M=-M"
-        elif argument == "not":
-            op = "M=!M"
-        else:
-            RuntimeError(f"Unexpected argument: {argument}")
-        lines.extend(["@SP", "A=M-1", op])
-        return lines
-
     def _generate_comparison(self, lines: List[str], argument: str) -> List[str]:
         if argument == "eq":
             jump_line = "D; JEQ"
@@ -159,6 +189,16 @@ class CodeGenerator:
             ]
         )
         self._jmp_count += 1
+        return lines
+
+    def _generate_unary_op(self, lines: List[str], argument: str) -> List[str]:
+        if argument == "neg":
+            op = "M=-M"
+        elif argument == "not":
+            op = "M=!M"
+        else:
+            RuntimeError(f"Unexpected argument: {argument}")
+        lines.extend(["@SP", "A=M-1", op])
         return lines
 
     def generate_push(self, memory_segment: str, argument: int) -> str:

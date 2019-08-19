@@ -12,12 +12,20 @@ from vm_translator import (
 @pytest.mark.parametrize(
     "case, expected",
     [
+        ("  // abc\n", (CommandType.NONE, (None, None))),
         ("push local 1\n", (CommandType.PUSH, ("local", 1))),
         ("push argument 2\n", (CommandType.PUSH, ("argument", 2))),
         ("push this 34\n", (CommandType.PUSH, ("this", 34))),
         ("push that 456\n", (CommandType.PUSH, ("that", 456))),
-        ("push static 123456\n", (CommandType.PUSH, ("static", 123456))),
-        ("push constant 0\n", (CommandType.PUSH, ("constant", 0))),
+        ("  push static 123456\n", (CommandType.PUSH, ("static", 123456))),
+        ("\tpush constant 0\n", (CommandType.PUSH, ("constant", 0))),
+        ("local ABC_DEF\n", (CommandType.LABEL, ("ABC_DEF", None))),
+        ("local A$.\n", (CommandType.LABEL, ("A$.", None))),
+        ("goto ABC_DEF\n", (CommandType.GOTO, ("ABC_DEF", None))),
+        ("if-goto ABC_DEF\n", (CommandType.IFGOTO, ("ABC_DEF", None))),
+        ("function fn 3\n", (CommandType.FUNCTION, ("fn", 3))),
+        ("call fn 1\n", (CommandType.CALL, ("fn", 1))),
+        ("return\n", (CommandType.RETURN, (None, None))),
     ],
 )
 def test_parser(case, expected):
