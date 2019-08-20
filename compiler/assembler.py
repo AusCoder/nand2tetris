@@ -116,7 +116,7 @@ def parse_a_instruction_numeric(line: str, line_num: int):
 
 
 def parse_a_instruction_symbolic(line: str, line_num: int):
-    pat = r"^\s*@([a-zA-Z][a-zA-Z\d_\.$]*)\s*(//.*)?$"
+    pat = r"^\s*@([a-zA-Z][a-zA-Z\d_\.:$]*)\s*(//.*)?$"
     result_fn = lambda match: AInstructionSymbolic(match.group(1), line_num)
     return _parse(pat, result_fn, line, line_num)
 

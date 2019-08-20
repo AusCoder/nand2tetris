@@ -39,6 +39,7 @@ def test_parse_a_instruction_numeric(case, expected):
         ("  @a1  ", "a1"),
         ("  @sys.init  ", "sys.init"),
         ("  @sys.init$if_false2  ", "sys.init$if_false2"),
+        ("  @sys.init:something  ", "sys.init:something"),
     ],
 )
 def test_parse_a_instruction_symbolic(case, expected):

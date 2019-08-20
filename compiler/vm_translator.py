@@ -45,7 +45,7 @@ class Parser:
     _re_push = rf"\s*push\s+{_re_memory_segment}\s+{_re_argument}{_re_eol}"
     _re_pop = rf"\s*pop\s+{_re_memory_segment}\s+{_re_argument}{_re_eol}"
     # Symbol name regex
-    _re_symbol = r"([a-zA-Z][a-zA-Z\d_\.$]*)"
+    _re_symbol = r"([a-zA-Z][a-zA-Z\d_\.:$]*)"
     # Label regex
     _re_label = rf"\s*label\s+{_re_symbol}{_re_eol}"
     # Goto regex
@@ -57,7 +57,7 @@ class Parser:
     # Call regex
     _re_call = rf"\s*call\s+{_re_symbol}\s+(\d+){_re_eol}"
     # Return regex
-    _re_return = r"\s*return{_re_eol}"
+    _re_return = rf"\s*return{_re_eol}"
 
     _regexs = [
         (re.compile(r), c)
