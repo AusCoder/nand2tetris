@@ -107,7 +107,11 @@ class Parser:
                 memory_segment, argument, _ = m.groups()
                 self._current_arguments = (memory_segment, int(argument))
                 return command_type
-            elif command_type in [CommandType.LABEL, CommandType.GOTO, CommandType.IFGOTO]:
+            elif command_type in [
+                CommandType.LABEL,
+                CommandType.GOTO,
+                CommandType.IFGOTO,
+            ]:
                 label, _ = m.groups()
                 self._current_arguments = (label, None)
                 return command_type
@@ -294,6 +298,20 @@ class CodeGenerator:
         else:
             raise RuntimeError(f"Unexpected memory segment: {memory_segment}")
 
+    def generate_label(self, symbol: str) -> str:
+        lines = [f"// label {symbol}", f"({symbol})"]
+        return "\n".join(lines)
+
+    def generate_goto(self, symbol: str) -> str:
+        lines = [f"// goto {symbol}", f"@{symbol}", "0; JMP"]
+        return "\n".join(lines)
+
+    def generate_if_goto(self, symbol: str) -> str:
+        lines = [f"// if-goto {symbol}"]
+        lines.extend(self._sp_dec_pop_d())
+        lines.extend([f"@{symbol}", "D; JNE"])
+        return "\n".join(lines)
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
@@ -329,6 +347,15 @@ def main(args: argparse.Namespace) -> None:
                     code = code_gen.generate_push(*p.arguments())
                 elif command_type == CommandType.POP:
                     code = code_gen.generate_pop(*p.arguments())
+                elif command_type == CommandType.LABEL:
+                    label, _ = p.arguments()
+                    code = code_gen.generate_label(label)
+                elif command_type == CommandType.GOTO:
+                    label, _ = p.arguments()
+                    code = code_gen.generate_goto(label)
+                elif command_type == CommandType.IFGOTO:
+                    label, _ = p.arguments()
+                    code = code_gen.generate_if_goto(label)
                 else:
                     raise RuntimeError(f"Unexpected command type: {command_type}")
                 out_fh.write(code)
