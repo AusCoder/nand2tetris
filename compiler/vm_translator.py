@@ -136,14 +136,8 @@ class CodeGenerator:
     def __init__(self, verbose: bool = True) -> None:
         self.static_prefix = None
         self._uniq_int = 0
-        self._fn_call_stack = deque()
+        self._current_fn_name = "Sys.init"
         self._verbose = verbose
-
-    def current_fn_name(self):
-        try:
-            return self._fn_call_stack[-1]
-        except IndexError:
-            return "Sys.init"
 
     def generate_init(self) -> str:
         lines = ["// bootstrap"] if self._verbose else []
@@ -331,24 +325,24 @@ class CodeGenerator:
             raise RuntimeError(f"Unexpected memory segment: {memory_segment}")
 
     def generate_label(self, symbol: str) -> str:
-        label = f"{self.current_fn_name()}${symbol}"
+        label = f"{self._current_fn_name}${symbol}"
         lines = [f"// label {label}", f"({label})"] if self._verbose else []
         return "\n".join(lines)
 
     def generate_goto(self, symbol: str) -> str:
-        label = f"{self.current_fn_name()}${symbol}"
+        label = f"{self._current_fn_name}${symbol}"
         lines = [f"// goto {label}", f"@{label}", "0; JMP"] if self._verbose else []
         return "\n".join(lines)
 
     def generate_if_goto(self, symbol: str) -> str:
-        label = f"{self.current_fn_name()}${symbol}"
+        label = f"{self._current_fn_name}${symbol}"
         lines = [f"// if-goto {label}"] if self._verbose else []
         lines.extend(self._sp_dec_pop_d())
         lines.extend([f"@{label}", "D; JNE"])
         return "\n".join(lines)
 
     def generate_function(self, name: str, num_locals: int) -> str:
-        self._fn_call_stack.append(name)
+        self._current_fn_name = name
         lines = [f"// function {name} {num_locals}"] if self._verbose else []
         lines.extend([f"({name})", "D=0"])
         for _ in range(num_locals):
@@ -356,15 +350,15 @@ class CodeGenerator:
         return "\n".join(lines)
 
     def generate_return(self) -> str:
-        self._fn_call_stack.pop()
         lines = ["// return"] if self._verbose else []
         lines.extend([
             "@LCL  // R13 = LCL = FRAME",
             "D=M",
             "@R13",
             "M=D",
-            "@5  // R14 = LCL-5 = return address",
-            "D=D-A",
+            "@5  // R14 = *(LCL - 5) = return address",
+            "A=D-A",
+            "D=M",
             "@R14",
             "M=D",
             "@SP  // *ARG = return value",
@@ -414,7 +408,6 @@ class CodeGenerator:
         lines = [f"// call {name} {num_arguments}"] if self._verbose else []
         return_label = f"RETURN_{self._uniq_int}"
         self._uniq_int += 1
-        self._fn_call_stack.append(name)
         # push return address
         lines.extend([f"@{return_label}", "D=A"])
         lines.extend(self._push_d_sp_inc())
