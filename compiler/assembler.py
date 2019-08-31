@@ -200,7 +200,9 @@ def gen_instructions(lines: Iterable[Any]):
         yield statement
 
 
-def fill_rom_symbol_table(rom_symbol_table: Dict[str, int], instructions: Iterable[Any]):
+def fill_rom_symbol_table(
+    rom_symbol_table: Dict[str, int], instructions: Iterable[Any]
+):
     """ First pass of the assembler that fills the rom symbol table
         with locations of symbols.
     """
@@ -283,9 +285,7 @@ def main(args: argparse.Namespace):
     instructions = gen_translated_symbols(
         rom_symbol_table, ram_symbol_table, instructions
     )
-    machine_code = gen_machine_code(
-        comp_table, dest_table, jump_table, instructions
-    )
+    machine_code = gen_machine_code(comp_table, dest_table, jump_table, instructions)
 
     # Write machine code to output file
     output_filepath.write_text("\n".join(l for l in machine_code))

@@ -4,10 +4,8 @@ pip install pytest
 """
 import pytest
 
-from vm_translator import (
-    CommandType,
-    Parser,
-)
+from vm_translator import CommandType, Parser
+
 
 @pytest.mark.parametrize(
     "case, expected",
