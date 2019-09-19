@@ -241,7 +241,6 @@ class Parser:
                 self._next()
             param_type_ = self.parse_type()
             param_name = self._parse_next(Identifier)
-            # parameters.append(Parameter(line_num=param_type_.line_num, type_=param_type_, name=param_name))
             parameters.append((param_type_, param_name))
         param_list = ParameterList(
             line_num=param_list_line_num,
@@ -270,10 +269,7 @@ class Parser:
             elif self._is_type(tok, Keyword, "var"):
                 var_decs.extend(self.parse_var_decs())
             else:
-                try:
-                    statements_list.append(self.parse_statement())
-                except ParseError as e:
-                    pass
+                statements_list.append(self.parse_statement())
         self._parse_next(Symbol, "}")
         statements = Statements(
             line_num=line_num,
@@ -518,7 +514,7 @@ class Parser:
         while True:
             try:
                 tok = self._peek()
-            except StopIteration:  # hmm seems arbitrary
+            except StopIteration:  # hmm seems arbitrary, I added this for tests
                 break
             if not self._is_type(
                 tok, Symbol, "+", "-", "*", "/", "&", "|", "<", ">", "="
