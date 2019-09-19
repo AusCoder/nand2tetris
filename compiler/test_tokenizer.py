@@ -18,12 +18,12 @@ from tokenizer import (
     [(f"{kw}\n", [Keyword(value=kw, line_num=0)]) for kw in VALID_KEYWORDS]
     + [(f"{s}\n", [Symbol(value=s, line_num=0)]) for s in VALID_SYMBOLS]
     + [
-        ("abc\n", [Identifier(name="abc", line_num=0)]),
+        ("abc\n", [Identifier(value="abc", line_num=0)]),
         ("23\n", [IntegerConstant(value="23", line_num=0)]),
         ('"abc"\n', [StringConstant(value="abc", line_num=0)]),
         ('""\n', [StringConstant(value="", line_num=0)]),
-        ("Main\n", [Identifier(name="Main", line_num=0)]),
-        ("Main {\n", [Identifier(name="Main", line_num=0), Symbol(value="{", line_num=0)]),
+        ("Main\n", [Identifier(value="Main", line_num=0)]),
+        ("Main {\n", [Identifier(value="Main", line_num=0), Symbol(value="{", line_num=0)]),
         ("   function", [Keyword(value="function", line_num=0)]),
         ("// abc\n", []),
         ("  // abc", []),
@@ -41,7 +41,7 @@ EXAMPLE1 = """function main {
 """.split("\n")
 EXPECTED1 = [
     Keyword(value="function", line_num=0),
-    Identifier(name="main", line_num=0),
+    Identifier(value="main", line_num=0),
     Symbol(value="{", line_num=0),
     Symbol(value="}", line_num=1),
 ]

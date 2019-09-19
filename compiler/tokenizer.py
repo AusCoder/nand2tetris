@@ -27,8 +27,8 @@ VALID_KEYWORDS = [
     "return",
 ]
 
-SYMBOLDS_NEEDS_ESCAPE = ["(", ")", "[", "]", ".", "-", "+", "*"]
-SYMBOLS_REST = ["{", "}", ",", ";", "/", "&", ",", "<", ">", "=", "~"]
+SYMBOLDS_NEEDS_ESCAPE = ["(", ")", "[", "]", ".", "-", "+", "*", "|"]
+SYMBOLS_REST = ["{", "}", ",", ";", "/", "&", "<", ">", "=", "~"]
 VALID_SYMBOLS = SYMBOLDS_NEEDS_ESCAPE + SYMBOLS_REST
 VALID_SYMBOLS_ESCAPED = [
     rf"\{symbol}" for symbol in SYMBOLDS_NEEDS_ESCAPE
@@ -56,7 +56,7 @@ class Symbol(Token):
 
 @dataclass
 class Identifier(Token):
-    name: str
+    value: str
 
 
 @dataclass

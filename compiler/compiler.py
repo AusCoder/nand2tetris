@@ -1,5 +1,7 @@
 import sys
 from pathlib import Path
+import xml.etree.ElementTree as ET
+from xml.dom import minidom
 
 from tokenizer import gen_tokens_for_lines
 from parser import Parser
@@ -17,9 +19,11 @@ def main():
     # lines = print_gen(lines)
     tokens = gen_tokens_for_lines(lines=lines)
     parser = Parser(tokens)
-    print(parser.parse_class())
-    # for token in tokens:
-    #     print(token)
+    cls = parser.parse_class()
+    print(cls)
+    xmlstr = minidom.parseString(ET.tostring(cls.to_xml())).toprettyxml(indent="  ")
+    with open("test.xml", "w") as fh:
+        fh.write(xmlstr)
 
 
 if __name__ == "__main__":

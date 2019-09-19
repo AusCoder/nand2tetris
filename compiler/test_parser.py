@@ -9,19 +9,28 @@ from tokenizer import (
     StringConstant,
     gen_tokens_for_lines,
 )
-from parser import (Parser, Statement, LetStatement, Expression, ConstantTerm, ExpressionTerm, UnaryOpTerm)
+from parser import (Parser, Statement, LetStatement, Expression, ConstantTerm, ParenTerm, UnaryOpTerm)
 
 
-@pytest.mark.parametrize("lines, expected_term_type", [
-    (["1"], ConstantTerm),
-    (["(1)"], ExpressionTerm),
-    (["-1"], UnaryOpTerm),
-])
-def test_parser_expression(lines, expected_term_type):
-    toks = gen_tokens_for_lines(lines=lines)
+def test_parser_expression_paren_term():
+    toks = gen_tokens_for_lines(lines=["(1)"])
     parsed = Parser(toks).parse_expression()
-    assert isinstance(parsed, Expression)
-    assert isinstance(parsed.term, expected_term_type)
+    assert isinstance(parsed.term, ParenTerm)
+
+
+def test_parser_expression_unary_term():
+    toks = gen_tokens_for_lines(lines=["-1"])
+    parsed = Parser(toks).parse_expression()
+    assert isinstance(parsed.term, UnaryOpTerm)
+    assert parsed.term.op.value == "-"
+
+
+def test_parser_expression_with_tail():
+    toks = gen_tokens_for_lines(lines=["1 + 1 + 1"])
+    parsed = Parser(toks).parse_expression()
+    assert isinstance(parsed.term, ConstantTerm)
+    assert all(isinstance(t, ConstantTerm) for _, t in parsed.tail)
+    assert all(o.value == "+" for o, _ in parsed.tail)
 
 
 @pytest.mark.parametrize("lines", [
