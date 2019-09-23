@@ -13,20 +13,20 @@ from parser import (Parser, Statement, LetStatement, Expression, ConstantTerm, P
 
 
 def test_parser_expression_paren_term():
-    toks = gen_tokens_for_lines(lines=["(1)"])
+    toks = gen_tokens_for_lines(lines=["(1);"])
     parsed = Parser(toks).parse_expression()
     assert isinstance(parsed.term, ParenTerm)
 
 
 def test_parser_expression_unary_term():
-    toks = gen_tokens_for_lines(lines=["-1"])
+    toks = gen_tokens_for_lines(lines=["-1;"])
     parsed = Parser(toks).parse_expression()
     assert isinstance(parsed.term, UnaryOpTerm)
     assert parsed.term.op.value == "-"
 
 
 def test_parser_expression_with_tail():
-    toks = gen_tokens_for_lines(lines=["1 + 1 + 1"])
+    toks = gen_tokens_for_lines(lines=["1 + 1 + 1;"])
     parsed = Parser(toks).parse_expression()
     assert isinstance(parsed.term, ConstantTerm)
     assert all(isinstance(t, ConstantTerm) for _, t in parsed.tail)

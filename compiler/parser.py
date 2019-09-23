@@ -124,6 +124,11 @@ class Statement(Node):
 
 
 @dataclass
+class Statements(Node):
+    statements: List[Statement]
+
+
+@dataclass
 class LetStatement(Statement):
     name: str
     idx_expression: Optional[Any]
@@ -133,14 +138,14 @@ class LetStatement(Statement):
 @dataclass
 class IfStatement(Statement):
     condition: Expression
-    true_statements: List[Statement]
-    false_statements: List[Statement]
+    true_statements: Statements
+    false_statements: Statements
 
 
 @dataclass
 class WhileStatement(Statement):
     condition: Expression
-    body: List[Statement]
+    body: Statements
 
 
 @dataclass
@@ -151,11 +156,6 @@ class DoStatement(Statement):
 @dataclass
 class ReturnStatement(Statement):
     expression: Optional[Expression]
-
-
-@dataclass
-class Statements(Node):
-    statements: List[Statement]
 
 
 @dataclass
@@ -328,12 +328,18 @@ class Parser:
             raise ParseError(f"{tok.line_num}. Unexpected token: {tok}")
 
     def parse_statements(self):
+        line_num = self._parse_next(Symbol, "{").line_num
         statements = []
         while True:
-            try:
-                statements.append(self.parse_statement())
-            except ParseError:
-                return statements
+            tok = self._peek()
+            if self._is_type(tok, Symbol, "}"):
+                break
+            statements.append(self.parse_statement())
+        self._parse_next(Symbol, "}")
+        return Statements(
+            line_num=line_num,
+            statements=statements,
+        )
 
     def parse_let_statement(self):
         line_num = self._parse_next(Keyword, "let").line_num
@@ -359,16 +365,13 @@ class Parser:
         self._parse_next(Symbol, "(")
         condition = self.parse_expression()
         self._parse_next(Symbol, ")")
-        self._parse_next(Symbol, "{")
         true_statements = self.parse_statements()
-        self._parse_next(Symbol, "}")
 
         tok = self._peek()
         if self._is_type(tok, Keyword, "else"):
             self._next()
-            self._parse_next(Symbol, "{")
             false_statements = self.parse_statements()
-            self._parse_next(Symbol, "}")
+
         else:
             false_statements = []
 
@@ -384,9 +387,7 @@ class Parser:
         self._parse_next(Symbol, "(")
         condition = self.parse_expression()
         self._parse_next(Symbol, ")")
-        self._parse_next(Symbol, "{")
         body = self.parse_statements()
-        self._parse_next(Symbol, "}")
         return WhileStatement(
             line_num=line_num,
             condition=condition,
@@ -463,9 +464,9 @@ class Parser:
                 name=ident,
                 index=index,
             )
-        try:
+        elif self._is_type(tok, Symbol, "(", "."):
             return self._parse_subroutine_call(ident)
-        except ParseError:
+        else:
             return VarTerm(line_num=ident.line_num, name=ident)
 
     def _parse_subroutine_call(self, identifier):
@@ -512,10 +513,7 @@ class Parser:
     def _parse_expression_tail(self):
         tail = []
         while True:
-            try:
-                tok = self._peek()
-            except StopIteration:  # hmm seems arbitrary, I added this for tests
-                break
+            tok = self._peek()
             if not self._is_type(
                 tok, Symbol, "+", "-", "*", "/", "&", "|", "<", ">", "="
             ):
