@@ -23,7 +23,10 @@ from tokenizer import (
         ('"abc"\n', [StringConstant(value="abc", line_num=0)]),
         ('""\n', [StringConstant(value="", line_num=0)]),
         ("Main\n", [Identifier(value="Main", line_num=0)]),
-        ("Main {\n", [Identifier(value="Main", line_num=0), Symbol(value="{", line_num=0)]),
+        (
+            "Main {\n",
+            [Identifier(value="Main", line_num=0), Symbol(value="{", line_num=0)],
+        ),
         ("   function", [Keyword(value="function", line_num=0)]),
         ("// abc\n", []),
         ("  // abc", []),
@@ -38,7 +41,9 @@ def test_gen_tokens_for_line(line, expected):
 
 EXAMPLE1 = """function main {
 }
-""".split("\n")
+""".split(
+    "\n"
+)
 EXPECTED1 = [
     Keyword(value="function", line_num=0),
     Identifier(value="main", line_num=0),
@@ -52,19 +57,18 @@ kjdfs
 */
 "abc" 1
 }
-""".split("\n")
+""".split(
+    "\n"
+)
 EXPECTED2 = [
     StringConstant(value="abc", line_num=4),
     IntegerConstant(value="1", line_num=4),
     Symbol(value="}", line_num=5),
 ]
 
+
 @pytest.mark.parametrize(
-    "lines, expected",
-    [
-        (EXAMPLE1, EXPECTED1),
-        (EXAMPLE2, EXPECTED2),
-    ],
+    "lines, expected", [(EXAMPLE1, EXPECTED1), (EXAMPLE2, EXPECTED2)]
 )
 def test_gen_tokens_for_lines(lines, expected):
     toks = gen_tokens_for_lines(lines=lines)

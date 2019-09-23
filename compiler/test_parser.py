@@ -9,7 +9,15 @@ from tokenizer import (
     StringConstant,
     gen_tokens_for_lines,
 )
-from parser import (Parser, Statement, LetStatement, Expression, ConstantTerm, ParenTerm, UnaryOpTerm)
+from parser import (
+    Parser,
+    Statement,
+    LetStatement,
+    Expression,
+    ConstantTerm,
+    ParenTerm,
+    UnaryOpTerm,
+)
 
 
 def test_parser_expression_paren_term():
@@ -33,11 +41,9 @@ def test_parser_expression_with_tail():
     assert all(o.value == "+" for o, _ in parsed.tail)
 
 
-@pytest.mark.parametrize("lines", [
-    ["let x = 1;"],
-    ["let x[2] = 1;"],
-    ["let x = 1 + 1;"],
-])
+@pytest.mark.parametrize(
+    "lines", [["let x = 1;"], ["let x[2] = 1;"], ["let x = 1 + 1;"]]
+)
 def test_parser_let(lines):
     toks = gen_tokens_for_lines(lines=lines)
     assert isinstance(Parser(toks).parse_let_statement(), LetStatement)

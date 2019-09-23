@@ -5,6 +5,7 @@ from xml.dom import minidom
 
 from tokenizer import gen_tokens_for_lines
 from parser import Parser
+from code_generator import CodeGenerator
 
 
 def print_gen(xs):
@@ -20,10 +21,13 @@ def main():
     tokens = gen_tokens_for_lines(lines=lines)
     parser = Parser(tokens)
     cls = parser.parse_class()
-    print(cls)
-    xmlstr = minidom.parseString(ET.tostring(cls.to_xml())).toprettyxml(indent="  ")
-    with open("test.xml", "w") as fh:
-        fh.write(xmlstr)
+    code_generator = CodeGenerator()
+    code_generator.generate(cls)
+    # print(code_generator._symbol_tables._tables[0]._table)
+    # print(cls)
+    # xmlstr = minidom.parseString(ET.tostring(cls.to_xml())).toprettyxml(indent="  ")
+    # with open("test.xml", "w") as fh:
+    #     fh.write(xmlstr)
 
 
 if __name__ == "__main__":

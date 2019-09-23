@@ -38,13 +38,11 @@ class Node:
             if isinstance(v, Token):
                 e = token_to_xml(v)
                 self_element.append(e)
-            if isinstance(v, Node):
+            elif isinstance(v, Node):
                 self_element.append(v.to_xml())
             elif isinstance(v, list) and all(isinstance(n, Node) for n in v):
                 for n in v:
-                    self_element.append(
-                        n.to_xml()
-                    )
+                    self_element.append(n.to_xml())
             elif isinstance(v, list) and all(isinstance(t, tuple) for t in v):
                 for t in v:
                     for n in t:
@@ -242,10 +240,7 @@ class Parser:
             param_type_ = self.parse_type()
             param_name = self._parse_next(Identifier)
             parameters.append((param_type_, param_name))
-        param_list = ParameterList(
-            line_num=param_list_line_num,
-            parameters=parameters
-        )
+        param_list = ParameterList(line_num=param_list_line_num, parameters=parameters)
         self._parse_next(Symbol, ")")
 
         body = self.parse_subroutine_body()
@@ -271,14 +266,9 @@ class Parser:
             else:
                 statements_list.append(self.parse_statement())
         self._parse_next(Symbol, "}")
-        statements = Statements(
-            line_num=line_num,
-            statements=statements_list,
-        )
+        statements = Statements(line_num=line_num, statements=statements_list)
         return SubroutineBody(
-            line_num=line_num,
-            var_decs=var_decs,
-            statements=statements,
+            line_num=line_num, var_decs=var_decs, statements=statements
         )
 
     def parse_type(self):
@@ -336,10 +326,7 @@ class Parser:
                 break
             statements.append(self.parse_statement())
         self._parse_next(Symbol, "}")
-        return Statements(
-            line_num=line_num,
-            statements=statements,
-        )
+        return Statements(line_num=line_num, statements=statements)
 
     def parse_let_statement(self):
         line_num = self._parse_next(Keyword, "let").line_num
@@ -388,21 +375,14 @@ class Parser:
         condition = self.parse_expression()
         self._parse_next(Symbol, ")")
         body = self.parse_statements()
-        return WhileStatement(
-            line_num=line_num,
-            condition=condition,
-            body=body,
-        )
+        return WhileStatement(line_num=line_num, condition=condition, body=body)
 
     def parse_do_statement(self):
         line_num = self._parse_next(Keyword, "do").line_num
         identifier = self._parse_next(Identifier)
         subroutine_call_term = self._parse_subroutine_call(identifier)
         self._parse_next(Symbol, ";")
-        return DoStatement(
-            line_num=line_num,
-            term=subroutine_call_term,
-        )
+        return DoStatement(line_num=line_num, term=subroutine_call_term)
 
     def parse_return_statement(self):
         line_num = self._parse_next(Keyword, "return").line_num
@@ -412,19 +392,12 @@ class Parser:
         else:
             expression = self.parse_expression()
         self._parse_next(Symbol, ";")
-        return ReturnStatement(
-            line_num=line_num,
-            expression=expression,
-        )
+        return ReturnStatement(line_num=line_num, expression=expression)
 
     def parse_expression(self):
         term = self.parse_term()
         tail = self._parse_expression_tail()
-        return Expression(
-            line_num=term.line_num,
-            term=term,
-            tail=tail,
-        )
+        return Expression(line_num=term.line_num, term=term, tail=tail)
 
     def parse_term(self):
         tok = self._peek()
@@ -459,11 +432,7 @@ class Parser:
             self._next()
             index = self.parse_expression()
             self._parse_next(Symbol, "]")
-            return VarIndexTerm(
-                line_num=ident.line_num,
-                name=ident,
-                index=index,
-            )
+            return VarIndexTerm(line_num=ident.line_num, name=ident, index=index)
         elif self._is_type(tok, Symbol, "(", "."):
             return self._parse_subroutine_call(ident)
         else:
