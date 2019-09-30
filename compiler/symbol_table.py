@@ -48,6 +48,7 @@ class Symbol:
     name: str
     type_: Type
     kind: Kind
+    index: int
 
 
 class SymbolTable:
@@ -55,9 +56,10 @@ class SymbolTable:
         self._table = dict()
 
     def add(self, name: str, type_: Type, kind: Kind):
+        index = max((s.index for s in self._table.values()), default=-1) + 1
         if name in self._table:
             raise SymbolTableError(f"Symbol already exists: {name}")
-        self._table[name] = Symbol(name, type_, kind)
+        self._table[name] = Symbol(name, type_, kind, index)
 
     def lookup(self, name: str):
         try:
@@ -83,9 +85,9 @@ class SymbolTables:
             raise SymbolTableError("No symbol tables pushed")
 
     def lookup(self, name: str) -> Symbol:
-        for symbol_table in self._symbol_tables:
+        for symbol_table in self._tables:
             try:
-                return symbol_table.get(name)
+                return symbol_table.lookup(name)
             except SymbolNotFoundError:
                 pass
         raise SymbolNotFoundError(f"Symbol not found: {name}")

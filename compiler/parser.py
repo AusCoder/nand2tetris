@@ -66,16 +66,12 @@ class ParameterList(Node):
 
 
 @dataclass
-class VarDec(Node):
-    type_: Token
-    name: Token
-
-
-@dataclass
 class Term(Node):
     pass
 
 
+# Instead I could have different types for ints, strings, bools...
+# that might be nicer in the code_generator
 @dataclass
 class ConstantTerm(Term):
     value: Token
@@ -83,25 +79,25 @@ class ConstantTerm(Term):
 
 @dataclass
 class VarTerm(Term):
-    name: Token
+    value: Token
 
 
 @dataclass
 class VarIndexTerm(Term):
     name: Token
-    index: Any
+    index: Any  # Expression
 
 
 @dataclass
 class SubroutineCallTerm(Term):
     qualifier: Optional[Token]  # Class.method(x) or someVar.method(x)
     name: Token
-    arguments: Any
+    arguments: List[Any]  # List[Expression]
 
 
 @dataclass
 class ParenTerm(Term):
-    expression: Any
+    expression: Any  # Expression
 
 
 @dataclass
@@ -110,6 +106,8 @@ class UnaryOpTerm(Term):
     term: Term
 
 
+# We could transform this into a tree
+# Then use operator prescedence to structure it
 @dataclass
 class Expression(Node):
     term: Term
@@ -128,8 +126,8 @@ class Statements(Node):
 
 @dataclass
 class LetStatement(Statement):
-    name: str
-    idx_expression: Optional[Any]
+    name: Token
+    idx_expression: Optional[Expression]
     expression: Expression
 
 
@@ -158,7 +156,7 @@ class ReturnStatement(Statement):
 
 @dataclass
 class SubroutineBody(Node):
-    var_decs: List[VarDec]
+    var_decs: List[Tuple[Token, Token]]
     statements: Statements
 
 
@@ -288,7 +286,7 @@ class Parser:
         type_ = self.parse_type()
         var_names = self._parse_var_identifier_list()
         return [
-            VarDec(line_num=name.line_num, type_=type_, name=name) for name in var_names
+            (type_, name) for name in var_names
         ]
 
     def _parse_var_identifier_list(self):
@@ -399,6 +397,9 @@ class Parser:
         tail = self._parse_expression_tail()
         return Expression(line_num=term.line_num, term=term, tail=tail)
 
+# 1, (* 2), (+ 8), (- 7)
+# (* 1 (+ 2 (- 8 7)))
+
     def parse_term(self):
         tok = self._peek()
         if self._is_type(tok, IntegerConstant):
@@ -436,7 +437,7 @@ class Parser:
         elif self._is_type(tok, Symbol, "(", "."):
             return self._parse_subroutine_call(ident)
         else:
-            return VarTerm(line_num=ident.line_num, name=ident)
+            return VarTerm(line_num=ident.line_num, value=ident)
 
     def _parse_subroutine_call(self, identifier):
         """If you think about it, passing this identifier is letting
