@@ -22,7 +22,7 @@ def main():
     parser = Parser(tokens)
     cls = parser.parse_class()
     code_generator = CodeGenerator()
-    code_generator.generate(cls)
+    code = code_generator.generate(cls)
     # print(code_generator._symbol_tables._tables[0]._table)
     # print(cls)
     # xmlstr = minidom.parseString(ET.tostring(cls.to_xml())).toprettyxml(indent="  ")

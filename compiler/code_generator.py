@@ -50,11 +50,11 @@ class CodeGenerator:
                 type_=self._gen_type(var_dec.type_),
                 kind=self._gen_class_var_kind(var_dec.modifier),
             )
-        for subroutine_dec in class_.subroutine_decs:
-            self.generate_subroutine(
-                subroutine_dec
-            )
+        code = list(itertools.chain.from_iterable(
+            self.generate_subroutine(dec) for dec in class_.subroutine_decs
+        ))
         self._symbol_tables.pop()
+        return code
 
     def generate_subroutine(self, dec: SubroutineDec):
         self._symbol_tables.push_new()
@@ -72,13 +72,11 @@ class CodeGenerator:
                 kind=Kind.LOCAL,
             )
 
-        code = list()
-        for statement in dec.body.statements.statements:
-            code.extend(self.generate_statement(statement))
-        for tab in self._symbol_tables._tables:
-            print(tab._table)
-
+        code = list(itertools.chain.from_iterable(
+            self.generate_statement(stm) for stm in dec.body.statements.statements
+        ))
         self._symbol_tables.pop()
+        return code
 
     def _gen_class_var_kind(self, token: Token) -> Kind:
         if token.value == "static":
@@ -109,6 +107,10 @@ class CodeGenerator:
             )
             if statement.idx_expression:
                 # TODO: I need to set that
+                # It is something like:
+                # push argument idx
+                # handle multi idxing
+                # pop pointer 1 + n
                 raise NotImplementedError
             else:
                 mem_segment = self._gen_memory_segment(symbol.kind)
@@ -191,7 +193,10 @@ class CodeGenerator:
             elif isinstance(term.value, Keyword) and term.value.value == "false":
                 return ["push constant 0"]
             elif isinstance(term.value, Keyword) and term.value.value == "this":
-                # TODO: need to check var
+                # TODO: need to push this as argument!
+                # symbol = self._symbol_tables.lookup("this")
+                # mem_segment = self._gen_memory_segment(symbol.kind)
+                # return [f"push {mem_segment} {symbol.index}"]
                 return ["push argument 0"]
         elif isinstance(term, VarTerm):
             symbol = self._symbol_tables.lookup(term.value.value)
@@ -203,6 +208,7 @@ class CodeGenerator:
             # TODO: how to handle methods?
             # Need to add this as an argument
             # Also need to lookup if a function is a method
+            # So need to keep a table of function modifiers?
             code = list(itertools.chain.from_iterable(
                 self.generate_expression(e) for e in term.arguments
             ))
