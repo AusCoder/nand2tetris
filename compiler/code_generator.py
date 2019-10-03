@@ -33,6 +33,7 @@ from parser import (
     WhileStatement,
     DoStatement,
     WhileStatement,
+    ReturnStatement,
 )
 
 
@@ -70,8 +71,10 @@ class CodeGenerator:
                 type_=self._gen_type(type_),
                 kind=Kind.LOCAL,
             )
+
+        code = list()
         for statement in dec.body.statements.statements:
-            self.generate_statement(statement)
+            code.extend(self.generate_statement(statement))
         for tab in self._symbol_tables._tables:
             print(tab._table)
 
@@ -98,12 +101,14 @@ class CodeGenerator:
         code = list()
         uniq_label = self._uniq_label
         self._uniq_label += 1
+
         if isinstance(statement, LetStatement):
             symbol = self._symbol_tables.lookup(statement.name.value)
             code.extend(
                 self.generate_expression(statement.expression)
             )
             if statement.idx_expression:
+                # TODO: I need to set that
                 raise NotImplementedError
             else:
                 mem_segment = self._gen_memory_segment(symbol.kind)
@@ -121,12 +126,14 @@ class CodeGenerator:
                 "not",
                 f"if-goto {false_label}",
             ])
-            # TODO false_statements code
+            for stm in statement.false_statements.statements:
+                code.extend(self.generate_statement(stm))
             code.extend([
                 f"goto {end_label}",
                 f"label {false_label}",
             ])
-            # TODO true_statements code
+            for stm in statement.true_statements.statements:
+                code.extend(self.generate_statement(stm))
             code.append(f"label {end_label}")
             return code
         elif isinstance(statement, WhileStatement):
@@ -137,7 +144,8 @@ class CodeGenerator:
                 self.generate_expression(statement.condition)
             )
             code.append(f"if-goto {end_label}")
-            # TODO body statements code
+            for stm in statement.body.statements:
+                code.extend(self.generate_statement(stm))
             code.extend([
                 f"goto {start_label}",
                 f"label {end_label}",
@@ -155,7 +163,8 @@ class CodeGenerator:
             ])
             return code
         elif isinstance(statement, ReturnStatement):
-            pass
+            code.append("return")
+            return code
         raise NotImplementedError
 
     def generate_expression(self, exp: Expression):
@@ -181,6 +190,9 @@ class CodeGenerator:
                 return ["push constant 1", "neg"]
             elif isinstance(term.value, Keyword) and term.value.value == "false":
                 return ["push constant 0"]
+            elif isinstance(term.value, Keyword) and term.value.value == "this":
+                # TODO: need to check var
+                return ["push argument 0"]
         elif isinstance(term, VarTerm):
             symbol = self._symbol_tables.lookup(term.value.value)
             mem_segment = self._gen_memory_segment(symbol.kind)
@@ -197,14 +209,14 @@ class CodeGenerator:
             code.append(f"call {term.name.value}")
             return code
         elif isinstance(term, ParenTerm):
-            return self.generate_expression(term.value)
+            return self.generate_expression(term.expression)
         elif isinstance(term, UnaryOpTerm):
             term_code = self.generate_term(term.term)
             if term.op.value == "-":
                 return term_code + ["neg"]
             elif term.op.value == "~":
                 return term_code + ["not"]
-        raise RuntimeError
+        raise RuntimeError(f"Unknown term: {term}")
 
     def _gen_op(self, op: Token):
         if op.value == "+":

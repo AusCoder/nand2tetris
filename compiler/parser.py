@@ -356,9 +356,8 @@ class Parser:
         if self._is_type(tok, Keyword, "else"):
             self._next()
             false_statements = self.parse_statements()
-
         else:
-            false_statements = []
+            false_statements = Statements(line_num=tok.line_num, statements=[])
 
         return IfStatement(
             line_num=line_num,
