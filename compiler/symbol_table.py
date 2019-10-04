@@ -1,3 +1,4 @@
+import itertools
 from collections import deque
 from dataclasses import dataclass
 from enum import Enum
@@ -67,6 +68,9 @@ class SymbolTable:
         except KeyError:
             raise SymbolNotFoundError(f"Symbol not found: {name}")
 
+    def __iter__(self):
+        return iter(self._table.values())
+
 
 class SymbolTables:
     def __init__(self):
@@ -91,3 +95,6 @@ class SymbolTables:
             except SymbolNotFoundError:
                 pass
         raise SymbolNotFoundError(f"Symbol not found: {name}")
+
+    def __iter__(self):
+        return itertools.chain.from_iterable(self._tables)

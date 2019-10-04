@@ -439,9 +439,9 @@ class Parser:
             return VarTerm(line_num=ident.line_num, value=ident)
 
     def _parse_subroutine_call(self, identifier):
-        """If you think about it, passing this identifier is letting
-        us peek 2 ahead. This is necessary because we currently don't
-        have the ability to peek more than 1 ahead.
+        """If you think about it, passing this identifier as an argument
+        is letting us peek 2 ahead. This is necessary because we
+        currently don't have the ability to peek more than 1 ahead.
         """
         tok = self._peek()
         if self._is_type(tok, Symbol, "("):  # function call

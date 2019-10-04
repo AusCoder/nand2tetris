@@ -1,6 +1,7 @@
 import itertools
 from collections import deque
 from symbol_table import (
+    SymbolNotFoundError,
     SymbolTables,
     Kind,
     Type,
@@ -37,12 +38,19 @@ from parser import (
 )
 
 
+class CodeGeneratorError(Exception):
+    pass
+
+
 class CodeGenerator:
     def __init__(self):
         self._uniq_label = 0
+        self._cur_class_name = None
+        self._subroutine_type = None
         self._symbol_tables = SymbolTables()
 
     def generate(self, class_: Class):
+        self._cur_class_name = class_.name.value
         self._symbol_tables.push_new()
         for var_dec in class_.class_var_decs:
             self._symbol_tables.add(
@@ -57,6 +65,7 @@ class CodeGenerator:
         return code
 
     def generate_subroutine(self, dec: SubroutineDec):
+        self._subroutine_type = dec.modifier.value
         self._symbol_tables.push_new()
         for type_, name in dec.parameters.parameters:
             self._symbol_tables.add(
@@ -64,7 +73,6 @@ class CodeGenerator:
                 type_=self._gen_type(type_),
                 kind=Kind.ARGUMENT,
             )
-        # TODO: push this if we are in a method!
         for type_, name in dec.body.var_decs:
             self._symbol_tables.add(
                 name=name.value,
@@ -72,10 +80,33 @@ class CodeGenerator:
                 kind=Kind.LOCAL,
             )
 
-        code = list(itertools.chain.from_iterable(
+        # TODO: need to set this properly for a method
+        num_locals = len(dec.body.var_decs)
+        code = [
+            f"function {self._cur_class_name}.{dec.name.value} {num_locals}",
+        ]
+        if dec.modifier.value == "method":
+            code.extend([
+                "push argument 0",
+                "pop pointer 0",
+            ])
+        elif dec.modifier.value == "constructor":
+            # syms = [s for s in self._symbol_tables if s.kind == Kind.FIELD]
+            # import pdb; pdb.set_trace()
+            size = len([s for s in self._symbol_tables if s.kind == Kind.FIELD])
+            # import pdb; pdb.set_trace()
+            code.extend([
+                f"push constant {size}",
+                "call Memory.alloc 1",
+            ])
+        code.extend(itertools.chain.from_iterable(
             self.generate_statement(stm) for stm in dec.body.statements.statements
         ))
         self._symbol_tables.pop()
+
+        # TODO: rm debug
+        code.extend(["", ""])
+
         return code
 
     def _gen_class_var_kind(self, token: Token) -> Kind:
@@ -159,6 +190,9 @@ class CodeGenerator:
                 code.extend(
                     self.generate_expression(arg)
                 )
+            # TODO: call {name} {num_args}
+            # TODO: pull out the SubroutineCallTerm generation part and
+            # call it here
             code.extend([
                 f"call {call_term.name.value}",
                 "pop temp 0",
@@ -197,7 +231,7 @@ class CodeGenerator:
                 # symbol = self._symbol_tables.lookup("this")
                 # mem_segment = self._gen_memory_segment(symbol.kind)
                 # return [f"push {mem_segment} {symbol.index}"]
-                return ["push argument 0"]
+                return ["push pointer 0"]
         elif isinstance(term, VarTerm):
             symbol = self._symbol_tables.lookup(term.value.value)
             mem_segment = self._gen_memory_segment(symbol.kind)
@@ -209,10 +243,35 @@ class CodeGenerator:
             # Need to add this as an argument
             # Also need to lookup if a function is a method
             # So need to keep a table of function modifiers?
-            code = list(itertools.chain.from_iterable(
+
+            if term.qualifier:
+                try:
+                    # Method on an object
+                    symbol = self._symbol_tables.lookup(term.qualifier.value)
+                    if isinstance(symbol.type_, TypeClass):
+                        subroutine_cls_name = symbol.type_.value
+                        mem_segment = self._gen_memory_segment(symbol.kind)
+                        code = [f"push {mem_segment} {symbol.index}"]
+                        num_args = 1
+                    else:
+                        raise CodeGeneratorError(f"Type {symbol.type_} has not subroutines")
+                except SymbolNotFoundError:
+                    # Static function or constructor
+                    subroutine_cls_name = term.qualifier.value
+                    code = list()
+                    num_args = 0
+            else:
+                # Subroutine in current class
+                subroutine_cls_name = self._cur_class_name
+                code = list()
+                num_args = 0
+
+            code.extend(itertools.chain.from_iterable(
                 self.generate_expression(e) for e in term.arguments
             ))
-            code.append(f"call {term.name.value}")
+            num_args += len(term.arguments)
+
+            code.append(f"call {subroutine_cls_name}.{term.name.value} {num_args}")
             return code
         elif isinstance(term, ParenTerm):
             return self.generate_expression(term.expression)
