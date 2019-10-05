@@ -31,7 +31,6 @@ from parser import (
     Statement,
     LetStatement,
     IfStatement,
-    WhileStatement,
     DoStatement,
     WhileStatement,
     ReturnStatement,
@@ -91,16 +90,15 @@ class CodeGenerator:
                 "pop pointer 0",
             ])
         elif dec.modifier.value == "constructor":
-            # syms = [s for s in self._symbol_tables if s.kind == Kind.FIELD]
-            # import pdb; pdb.set_trace()
             size = len([s for s in self._symbol_tables if s.kind == Kind.FIELD])
-            # import pdb; pdb.set_trace()
             code.extend([
                 f"push constant {size}",
                 "call Memory.alloc 1",
+                "pop pointer 0",  # TODO: Is this correct? Need to set the this addr correctly
             ])
+        is_void_subroutine = isinstance(dec.type_, Keyword) and dec.type_.value == "void"
         code.extend(itertools.chain.from_iterable(
-            self.generate_statement(stm) for stm in dec.body.statements.statements
+            self.generate_statement(stm, is_void_subroutine) for stm in dec.body.statements.statements
         ))
         self._symbol_tables.pop()
 
@@ -126,7 +124,7 @@ class CodeGenerator:
         else:
             return TypeClass(token.value)
 
-    def generate_statement(self, statement: Statement):
+    def generate_statement(self, statement: Statement, is_void_subroutine: bool):
         code = list()
         uniq_label = self._uniq_label
         self._uniq_label += 1
@@ -159,14 +157,14 @@ class CodeGenerator:
                 "not",
                 f"if-goto {false_label}",
             ])
-            for stm in statement.false_statements.statements:
-                code.extend(self.generate_statement(stm))
+            for stm in statement.true_statements.statements:
+                code.extend(self.generate_statement(stm, is_void_subroutine))
             code.extend([
                 f"goto {end_label}",
                 f"label {false_label}",
             ])
-            for stm in statement.true_statements.statements:
-                code.extend(self.generate_statement(stm))
+            for stm in statement.false_statements.statements:
+                code.extend(self.generate_statement(stm, is_void_subroutine))
             code.append(f"label {end_label}")
             return code
         elif isinstance(statement, WhileStatement):
@@ -176,32 +174,35 @@ class CodeGenerator:
             code.extend(
                 self.generate_expression(statement.condition)
             )
-            code.append(f"if-goto {end_label}")
+            code.extend([
+                "not",
+                f"if-goto {end_label}",
+                ])
             for stm in statement.body.statements:
-                code.extend(self.generate_statement(stm))
+                code.extend(self.generate_statement(stm, is_void_subroutine))
             code.extend([
                 f"goto {start_label}",
                 f"label {end_label}",
             ])
             return code
         elif isinstance(statement, DoStatement):
-            call_term = statement.term
-            for arg in call_term.arguments:
-                code.extend(
-                    self.generate_expression(arg)
-                )
-            # TODO: call {name} {num_args}
-            # TODO: pull out the SubroutineCallTerm generation part and
-            # call it here
-            code.extend([
-                f"call {call_term.name.value}",
-                "pop temp 0",
-            ])
+            code.extend(self._gen_subroutine_call(statement.term))
+            code.append("pop temp 0")
             return code
         elif isinstance(statement, ReturnStatement):
+            if is_void_subroutine and statement.expression:
+                raise CodeGeneratorError(f"void subroutine cannot return a value: {statement}")
+            elif is_void_subroutine:
+                code.append("push constant 0")
+            elif statement.expression:
+                code.extend(
+                    self.generate_expression(statement.expression)
+                )
+            else:
+                raise CodeGeneratorError(f"Expected subroutine to either be void or return a value: {statement}")
             code.append("return")
             return code
-        raise NotImplementedError
+        raise CodeGeneratorError(f"Unknown statement: {statement}")
 
     def generate_expression(self, exp: Expression):
         op_stack = deque()
@@ -239,40 +240,7 @@ class CodeGenerator:
         elif isinstance(term, VarIndexTerm):
             raise NotImplementedError
         elif isinstance(term, SubroutineCallTerm):
-            # TODO: how to handle methods?
-            # Need to add this as an argument
-            # Also need to lookup if a function is a method
-            # So need to keep a table of function modifiers?
-
-            if term.qualifier:
-                try:
-                    # Method on an object
-                    symbol = self._symbol_tables.lookup(term.qualifier.value)
-                    if isinstance(symbol.type_, TypeClass):
-                        subroutine_cls_name = symbol.type_.value
-                        mem_segment = self._gen_memory_segment(symbol.kind)
-                        code = [f"push {mem_segment} {symbol.index}"]
-                        num_args = 1
-                    else:
-                        raise CodeGeneratorError(f"Type {symbol.type_} has not subroutines")
-                except SymbolNotFoundError:
-                    # Static function or constructor
-                    subroutine_cls_name = term.qualifier.value
-                    code = list()
-                    num_args = 0
-            else:
-                # Subroutine in current class
-                subroutine_cls_name = self._cur_class_name
-                code = list()
-                num_args = 0
-
-            code.extend(itertools.chain.from_iterable(
-                self.generate_expression(e) for e in term.arguments
-            ))
-            num_args += len(term.arguments)
-
-            code.append(f"call {subroutine_cls_name}.{term.name.value} {num_args}")
-            return code
+            return self._gen_subroutine_call(term)
         elif isinstance(term, ParenTerm):
             return self.generate_expression(term.expression)
         elif isinstance(term, UnaryOpTerm):
@@ -281,7 +249,37 @@ class CodeGenerator:
                 return term_code + ["neg"]
             elif term.op.value == "~":
                 return term_code + ["not"]
-        raise RuntimeError(f"Unknown term: {term}")
+        raise CodeGeneratorError(f"Unknown term: {term}")
+
+    def _gen_subroutine_call(self, term: SubroutineCallTerm):
+        if term.qualifier:
+            try:
+                # Method on an object
+                symbol = self._symbol_tables.lookup(term.qualifier.value)
+                if isinstance(symbol.type_, TypeClass):
+                    subroutine_cls_name = symbol.type_.value
+                    mem_segment = self._gen_memory_segment(symbol.kind)
+                    code = [f"push {mem_segment} {symbol.index}"]
+                    num_args = 1
+                else:
+                    raise CodeGeneratorError(f"Type {symbol.type_} has no subroutines")
+            except SymbolNotFoundError:
+                # Static function or constructor
+                subroutine_cls_name = term.qualifier.value
+                code = list()
+                num_args = 0
+        else:
+            # Subroutine in current class
+            subroutine_cls_name = self._cur_class_name
+            code = list()
+            num_args = 0
+
+        num_args += len(term.arguments)
+        code.extend(itertools.chain.from_iterable(
+            self.generate_expression(e) for e in term.arguments
+        ))
+        code.append(f"call {subroutine_cls_name}.{term.name.value} {num_args}")
+        return code
 
     def _gen_op(self, op: Token):
         if op.value == "+":
@@ -289,9 +287,9 @@ class CodeGenerator:
         elif op.value == "-":
             return ["sub"]
         elif op.value == "*":
-            return ["call Math.multiply"]
+            return ["call Math.multiply 2"]
         elif op.value == "/":
-            return ["call Math.divide"]
+            return ["call Math.divide 2"]
         elif op.value == "&":
             return ["and"]
         elif op.value == "|":
@@ -302,7 +300,7 @@ class CodeGenerator:
             return ["gt"]
         elif op.value == "=":
             return ["eq"]
-        raise RuntimeError
+        raise CodeGeneratorError(f"Unknown op: {op}")
 
     def _gen_memory_segment(self, kind: Kind):
         if kind == Kind.FIELD:
@@ -313,4 +311,4 @@ class CodeGenerator:
             return "local"
         elif kind == Kind.ARGUMENT:
             return "argument"
-        raise RuntimeError
+        raise CodeGeneratorError(f"Unknown kind: {kind}")

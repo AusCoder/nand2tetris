@@ -57,7 +57,7 @@ class SymbolTable:
         self._table = dict()
 
     def add(self, name: str, type_: Type, kind: Kind):
-        index = max((s.index for s in self._table.values()), default=-1) + 1
+        index = max((s.index for s in self._table.values() if s.kind == kind), default=-1) + 1
         if name in self._table:
             raise SymbolTableError(f"Symbol already exists: {name}")
         self._table[name] = Symbol(name, type_, kind, index)
