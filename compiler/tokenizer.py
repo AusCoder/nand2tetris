@@ -97,7 +97,7 @@ MULTILINE_COMMENT_END_REGEX = re.compile(r"^.*\*/(.*)")
 IDENTIFIER_KEYWORD_REGEX = re.compile(r"^([a-zA-Z_][a-zA-Z_\d]*)\s*(.*)")
 SYMBOL_REGEXS = [re.compile(rf"^({symbol})\s*(.*)") for symbol in VALID_SYMBOLS_ESCAPED]
 INTEGER_CONSTANT_REGEX = re.compile(r"^(\d+)\s*(.*)")
-STRING_CONSTANT_REGEX = re.compile(r"^\"([a-zA-Z\d?\s:]*)\"\s*(.*)")
+STRING_CONSTANT_REGEX = re.compile(r"^\"([^\n\"]*)\"\s*(.*)")
 
 REGEXS_WITH_FACTORY = [
     (

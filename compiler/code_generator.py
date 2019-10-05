@@ -10,13 +10,7 @@ from symbol_table import (
     TypeBool,
     TypeClass,
 )
-from tokenizer import (
-    Token,
-    IntegerConstant,
-    StringConstant,
-    Keyword,
-    Symbol,
-)
+from tokenizer import Token, IntegerConstant, StringConstant, Keyword, Symbol
 from parser import (
     Class,
     SubroutineDec,
@@ -57,9 +51,11 @@ class CodeGenerator:
                 type_=self._gen_type(var_dec.type_),
                 kind=self._gen_class_var_kind(var_dec.modifier),
             )
-        code = list(itertools.chain.from_iterable(
-            self.generate_subroutine(dec) for dec in class_.subroutine_decs
-        ))
+        code = list(
+            itertools.chain.from_iterable(
+                self.generate_subroutine(dec) for dec in class_.subroutine_decs
+            )
+        )
         self._symbol_tables.pop()
         return code
 
@@ -68,38 +64,35 @@ class CodeGenerator:
         self._symbol_tables.push_new()
         for type_, name in dec.parameters.parameters:
             self._symbol_tables.add(
-                name=name.value,
-                type_=self._gen_type(type_),
-                kind=Kind.ARGUMENT,
+                name=name.value, type_=self._gen_type(type_), kind=Kind.ARGUMENT
             )
         for type_, name in dec.body.var_decs:
             self._symbol_tables.add(
-                name=name.value,
-                type_=self._gen_type(type_),
-                kind=Kind.LOCAL,
+                name=name.value, type_=self._gen_type(type_), kind=Kind.LOCAL
             )
 
-        # TODO: need to set this properly for a method
         num_locals = len(dec.body.var_decs)
-        code = [
-            f"function {self._cur_class_name}.{dec.name.value} {num_locals}",
-        ]
+        code = [f"function {self._cur_class_name}.{dec.name.value} {num_locals}"]
         if dec.modifier.value == "method":
-            code.extend([
-                "push argument 0",
-                "pop pointer 0",
-            ])
+            code.extend(["push argument 0", "pop pointer 0"])
         elif dec.modifier.value == "constructor":
             size = len([s for s in self._symbol_tables if s.kind == Kind.FIELD])
-            code.extend([
-                f"push constant {size}",
-                "call Memory.alloc 1",
-                "pop pointer 0",  # TODO: Is this correct? Need to set the this addr correctly
-            ])
-        is_void_subroutine = isinstance(dec.type_, Keyword) and dec.type_.value == "void"
-        code.extend(itertools.chain.from_iterable(
-            self.generate_statement(stm, is_void_subroutine) for stm in dec.body.statements.statements
-        ))
+            code.extend(
+                [
+                    f"push constant {size}",
+                    "call Memory.alloc 1",
+                    "pop pointer 0",  # TODO: Is this correct? Need to set the this addr correctly
+                ]
+            )
+        is_void_subroutine = (
+            isinstance(dec.type_, Keyword) and dec.type_.value == "void"
+        )
+        code.extend(
+            itertools.chain.from_iterable(
+                self.generate_statement(stm, is_void_subroutine)
+                for stm in dec.body.statements.statements
+            )
+        )
         self._symbol_tables.pop()
 
         # TODO: rm debug
@@ -131,38 +124,29 @@ class CodeGenerator:
 
         if isinstance(statement, LetStatement):
             symbol = self._symbol_tables.lookup(statement.name.value)
-            code.extend(
-                self.generate_expression(statement.expression)
-            )
+            mem_segment = self._gen_memory_segment(symbol.kind)
             if statement.idx_expression:
-                # TODO: I need to set that
-                # It is something like:
-                # push argument idx
-                # handle multi idxing
-                # pop pointer 1 + n
-                raise NotImplementedError
-            else:
-                mem_segment = self._gen_memory_segment(symbol.kind)
-                code.append(
-                    f"pop {mem_segment} {symbol.index}"
+                code.append(f"push {mem_segment} {symbol.index}")
+                code.extend(self.generate_expression(statement.idx_expression))
+                code.append("add")
+                code.extend(self.generate_expression(statement.expression))
+                # This is required to handle multiple array access
+                # with array assignment.
+                code.extend(
+                    ["pop temp 0", "pop pointer 1", "push temp 0", "pop that 0"]
                 )
+            else:
+                code.extend(self.generate_expression(statement.expression))
+                code.append(f"pop {mem_segment} {symbol.index}")
             return code
         elif isinstance(statement, IfStatement):
             false_label = f"IF{uniq_label}.FALSE"
             end_label = f"IF{uniq_label}.END"
-            code.extend(
-                self.generate_expression(statement.condition)
-            )
-            code.extend([
-                "not",
-                f"if-goto {false_label}",
-            ])
+            code.extend(self.generate_expression(statement.condition))
+            code.extend(["not", f"if-goto {false_label}"])
             for stm in statement.true_statements.statements:
                 code.extend(self.generate_statement(stm, is_void_subroutine))
-            code.extend([
-                f"goto {end_label}",
-                f"label {false_label}",
-            ])
+            code.extend([f"goto {end_label}", f"label {false_label}"])
             for stm in statement.false_statements.statements:
                 code.extend(self.generate_statement(stm, is_void_subroutine))
             code.append(f"label {end_label}")
@@ -171,19 +155,11 @@ class CodeGenerator:
             start_label = f"WHILE{uniq_label}.START"
             end_label = f"WHILE{uniq_label}.END"
             code.append(f"label {start_label}")
-            code.extend(
-                self.generate_expression(statement.condition)
-            )
-            code.extend([
-                "not",
-                f"if-goto {end_label}",
-                ])
+            code.extend(self.generate_expression(statement.condition))
+            code.extend(["not", f"if-goto {end_label}"])
             for stm in statement.body.statements:
                 code.extend(self.generate_statement(stm, is_void_subroutine))
-            code.extend([
-                f"goto {start_label}",
-                f"label {end_label}",
-            ])
+            code.extend([f"goto {start_label}", f"label {end_label}"])
             return code
         elif isinstance(statement, DoStatement):
             code.extend(self._gen_subroutine_call(statement.term))
@@ -191,15 +167,17 @@ class CodeGenerator:
             return code
         elif isinstance(statement, ReturnStatement):
             if is_void_subroutine and statement.expression:
-                raise CodeGeneratorError(f"void subroutine cannot return a value: {statement}")
+                raise CodeGeneratorError(
+                    f"void subroutine cannot return a value: {statement}"
+                )
             elif is_void_subroutine:
                 code.append("push constant 0")
             elif statement.expression:
-                code.extend(
-                    self.generate_expression(statement.expression)
-                )
+                code.extend(self.generate_expression(statement.expression))
             else:
-                raise CodeGeneratorError(f"Expected subroutine to either be void or return a value: {statement}")
+                raise CodeGeneratorError(
+                    f"Expected subroutine to either be void or return a value: {statement}"
+                )
             code.append("return")
             return code
         raise CodeGeneratorError(f"Unknown statement: {statement}")
@@ -221,24 +199,32 @@ class CodeGenerator:
             if isinstance(term.value, IntegerConstant):
                 return [f"push constant {int(term.value.value)}"]
             elif isinstance(term.value, StringConstant):
-                # TODO: requires multiple calls to String methods
-                raise NotImplementedError
+                # An alternative would be to rewrite as SubroutineCallTerms
+                # but this might be more efficient?
+                code = [f"push constant {len(term.value.value)}", "call String.new 1"]
+                for c in term.value.value:
+                    code.extend([f"push constant {ord(c)}", "call String.appendChar 2"])
+                return code
             elif isinstance(term.value, Keyword) and term.value.value == "true":
                 return ["push constant 1", "neg"]
-            elif isinstance(term.value, Keyword) and term.value.value == "false":
+            elif isinstance(term.value, Keyword) and term.value.value in [
+                "false",
+                "null",
+            ]:
                 return ["push constant 0"]
             elif isinstance(term.value, Keyword) and term.value.value == "this":
-                # TODO: need to push this as argument!
-                # symbol = self._symbol_tables.lookup("this")
-                # mem_segment = self._gen_memory_segment(symbol.kind)
-                # return [f"push {mem_segment} {symbol.index}"]
                 return ["push pointer 0"]
         elif isinstance(term, VarTerm):
             symbol = self._symbol_tables.lookup(term.value.value)
             mem_segment = self._gen_memory_segment(symbol.kind)
             return [f"push {mem_segment} {symbol.index}"]
         elif isinstance(term, VarIndexTerm):
-            raise NotImplementedError
+            symbol = self._symbol_tables.lookup(term.name.value)
+            mem_segment = self._gen_memory_segment(symbol.kind)
+            code = [f"push {mem_segment} {symbol.index}"]
+            code.extend(self.generate_expression(term.index))
+            code.extend(["add", "pop pointer 1", "push that 0"])
+            return code
         elif isinstance(term, SubroutineCallTerm):
             return self._gen_subroutine_call(term)
         elif isinstance(term, ParenTerm):
@@ -275,9 +261,11 @@ class CodeGenerator:
             num_args = 0
 
         num_args += len(term.arguments)
-        code.extend(itertools.chain.from_iterable(
-            self.generate_expression(e) for e in term.arguments
-        ))
+        code.extend(
+            itertools.chain.from_iterable(
+                self.generate_expression(e) for e in term.arguments
+            )
+        )
         code.append(f"call {subroutine_cls_name}.{term.name.value} {num_args}")
         return code
 

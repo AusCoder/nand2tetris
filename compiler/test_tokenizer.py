@@ -66,9 +66,26 @@ EXPECTED2 = [
     Symbol(value="}", line_num=5),
 ]
 
+EXAMPLE3 = """
+do Output.printString("Test 1: expected result: 5; actual result: ");
+""".split(
+    "\n"
+)
+EXPECTED3 = [
+    Keyword(value="do", line_num=1),
+    Identifier(value="Output", line_num=1),
+    Symbol(value=".", line_num=1),
+    Identifier(value="printString", line_num=1),
+    Symbol(value="(", line_num=1),
+    StringConstant(value="Test 1: expected result: 5; actual result: ", line_num=1),
+    Symbol(value=")", line_num=1),
+    Symbol(value=";", line_num=1),
+]
+
 
 @pytest.mark.parametrize(
-    "lines, expected", [(EXAMPLE1, EXPECTED1), (EXAMPLE2, EXPECTED2)]
+    "lines, expected",
+    [(EXAMPLE1, EXPECTED1), (EXAMPLE2, EXPECTED2), (EXAMPLE3, EXPECTED3)],
 )
 def test_gen_tokens_for_lines(lines, expected):
     toks = gen_tokens_for_lines(lines=lines)

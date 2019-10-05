@@ -285,9 +285,7 @@ class Parser:
         self._parse_next(Keyword, "var")
         type_ = self.parse_type()
         var_names = self._parse_var_identifier_list()
-        return [
-            (type_, name) for name in var_names
-        ]
+        return [(type_, name) for name in var_names]
 
     def _parse_var_identifier_list(self):
         var_names = [self._parse_next(Identifier)]
@@ -395,9 +393,6 @@ class Parser:
         term = self.parse_term()
         tail = self._parse_expression_tail()
         return Expression(line_num=term.line_num, term=term, tail=tail)
-
-# 1, (* 2), (+ 8), (- 7)
-# (* 1 (+ 2 (- 8 7)))
 
     def parse_term(self):
         tok = self._peek()

@@ -1,9 +1,5 @@
-from tokenizer import (
-    gen_tokens_for_lines,
-)
-from parser import (
-    Parser,
-)
+from tokenizer import gen_tokens_for_lines
+from parser import Parser
 from code_generator import CodeGenerator
 from symbol_table import Kind, TypeInt
 
@@ -18,7 +14,7 @@ def test_expression_with_ops():
         "push constant 2",
         "push constant 3",
         "add",
-        "call Math.multiply",
+        "call Math.multiply 2",
     ]
 
 
@@ -38,8 +34,8 @@ def test_expression_with_ops_and_fn_call():
         "push argument 1",
         "push argument 2",
         "neg",
-        "call Klass.g",
+        "call Klass.g 3",
         "push constant 5",
-        "call Math.multiply",
+        "call Math.multiply 2",
         "add",
     ]
