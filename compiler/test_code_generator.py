@@ -19,10 +19,9 @@ def test_expression_with_ops():
 
 
 def test_expression_with_ops_and_fn_call():
-    toks = gen_tokens_for_lines(lines=["x + g(2, y, -z) * 5;"])
+    toks = gen_tokens_for_lines(lines=["x + Klass.g(2, y, -z) * 5;"])
     parsed = Parser(toks).parse_expression()
     code_gen = CodeGenerator()
-    code_gen._cur_class_name = "Klass"
     code_gen._symbol_tables.push_new()
     code_gen._symbol_tables.add("x", TypeInt(), Kind.ARGUMENT)
     code_gen._symbol_tables.add("y", TypeInt(), Kind.ARGUMENT)

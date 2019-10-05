@@ -38,12 +38,15 @@ class CodeGeneratorError(Exception):
 class CodeGenerator:
     def __init__(self):
         self._uniq_label = 0
-        self._cur_class_name = None
-        self._subroutine_type = None
+        self._cur_class = None
         self._symbol_tables = SymbolTables()
 
+    @property
+    def _cur_class_name(self):
+        return self._cur_class.name.value
+
     def generate(self, class_: Class):
-        self._cur_class_name = class_.name.value
+        self._cur_class = class_
         self._symbol_tables.push_new()
         for var_dec in class_.class_var_decs:
             self._symbol_tables.add(
@@ -60,8 +63,12 @@ class CodeGenerator:
         return code
 
     def generate_subroutine(self, dec: SubroutineDec):
-        self._subroutine_type = dec.modifier.value
+        subroutine_type = dec.modifier.value
         self._symbol_tables.push_new()
+        if subroutine_type == "method":
+            self._symbol_tables.add(
+                name="this", type_=TypeClass(self._cur_class_name), kind=Kind.ARGUMENT
+            )
         for type_, name in dec.parameters.parameters:
             self._symbol_tables.add(
                 name=name.value, type_=self._gen_type(type_), kind=Kind.ARGUMENT
@@ -73,15 +80,15 @@ class CodeGenerator:
 
         num_locals = len(dec.body.var_decs)
         code = [f"function {self._cur_class_name}.{dec.name.value} {num_locals}"]
-        if dec.modifier.value == "method":
+        if subroutine_type == "method":
             code.extend(["push argument 0", "pop pointer 0"])
-        elif dec.modifier.value == "constructor":
+        elif subroutine_type == "constructor":
             size = len([s for s in self._symbol_tables if s.kind == Kind.FIELD])
             code.extend(
                 [
                     f"push constant {size}",
                     "call Memory.alloc 1",
-                    "pop pointer 0",  # TODO: Is this correct? Need to set the this addr correctly
+                    "pop pointer 0",
                 ]
             )
         is_void_subroutine = (
@@ -94,9 +101,6 @@ class CodeGenerator:
             )
         )
         self._symbol_tables.pop()
-
-        # TODO: rm debug
-        code.extend(["", ""])
 
         return code
 
@@ -257,8 +261,15 @@ class CodeGenerator:
         else:
             # Subroutine in current class
             subroutine_cls_name = self._cur_class_name
-            code = list()
-            num_args = 0
+            dec = next(
+                d for d in self._cur_class.subroutine_decs if d.name.value == term.name.value
+            )
+            if dec.modifier.value == "method":
+                code = ["push pointer 0"]
+                num_args = 1
+            else:
+                code = list()
+                num_args = 0
 
         num_args += len(term.arguments)
         code.extend(
