@@ -10,6 +10,9 @@ from code_generator import CodeGenerator
 
 
 OS_LIB = Path("tools/OS")
+EXTRA_OS_LIBS = [
+    Path("projects/12/Memory.vm"),
+]
 
 
 def print_gen(xs):
@@ -19,16 +22,21 @@ def print_gen(xs):
 
 
 def main():
-    input_dir = Path(sys.argv[1])
-    if not input_dir.is_dir():
-        raise RuntimeError(f"Expected a directory: {input_dir}")
+    inpt = Path(sys.argv[1])
+    if inpt.is_dir():
+        input_paths = inpt.glob("*.jack")
 
-    for src in OS_LIB.glob("*.vm"):
-        dst = input_dir.joinpath(src.name)
-        if not dst.exists():
+        for src in OS_LIB.glob("*.vm"):
+            dst = inpt.joinpath(src.name)
             shutil.copy(src, dst)
 
-    for input_path in input_dir.glob("*.jack"):
+        for src in EXTRA_OS_LIBS:
+            dst = inpt.joinpath(src.name)
+            shutil.copy(src, dst)
+    else:
+        input_paths = [inpt]
+
+    for input_path in input_paths:
         output_path = input_path.parent.joinpath(f"{input_path.stem}.vm")
         lines = (line for line in input_path.read_text().split("\n"))
         # lines = print_gen(lines)

@@ -1,0 +1,84 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/12/Memory.jack
+
+/**
+ * This library provides two services: direct access to the computer's main
+ * memory (RAM), and allocation and recycling of memory blocks. The Hack RAM
+ * consists of 32,768 words, each holding a 16-bit binary number.
+ */
+class Memory {
+    static Array ram;
+    static Array heap;
+    static Array freeList;
+
+    /** Initializes the class. */
+    function void init() {
+        let ram = 0;
+        let heap = 2048;
+        let freeList = 2048;
+        let heap[0] = null;
+        let heap[1] = 14334; // TODO: get exact number
+        return;
+    }
+
+    /** Returns the RAM value at the given address. */
+    function int peek(int address) {
+        return ram[address];
+    }
+
+    /** Sets the RAM value at the given address to the given value. */
+    function void poke(int address, int value) {
+        let ram[address] = value;
+        return;
+    }
+
+    /** Finds an available RAM block of the given size and returns
+     *  a reference to its base address. */
+    function int alloc(int size) {
+        var int addr;
+        var Array curNode;
+        var boolean continue;
+
+        let continue = true;
+        let curNode = freeList;
+        while (continue) {
+            if (curNode = null) {
+                let continue = false;
+            } else {
+                if (curNode[1] < size + 2) {
+                    let curNode = curNode[0];
+                } else {
+                    let continue = false;
+                }
+            }
+        }
+        if (curNode = null) {
+            // could not find a node
+            // Should this call Sys.error?
+            return null;
+        }
+
+        let addr = curNode + curNode[1];
+        let addr = addr - size;
+        let addr = addr - 2;
+        let ram[addr] = null;
+        let ram[addr + 1] = size;
+        let curNode[1] = (curNode[1] - size) - 2;
+        return addr + 2;
+    }
+
+    /** De-allocates the given object (cast as an array) by making
+     *  it available for future allocations. */
+    function void deAlloc(Array o) {
+        // back track 2 words
+        var Array curNode;
+        let curNode = freeList;
+        while (~(curNode[0] = null)) {
+            let curNode = curNode[0];
+        }
+        let curNode[0] = o - 2;
+        return;
+    }
+}
