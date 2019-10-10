@@ -12,6 +12,8 @@ from code_generator import CodeGenerator
 OS_LIB = Path("tools/OS")
 EXTRA_OS_LIBS = [
     Path("projects/12/Memory.vm"),
+    Path("projects/12/Array.vm"),
+    Path("projects/12/Math.vm"),
 ]
 
 

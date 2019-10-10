@@ -41,6 +41,10 @@ class Memory {
         var Array curNode;
         var boolean continue;
 
+        if (~(size > 0)) {
+            return null;
+        }
+
         let continue = true;
         let curNode = freeList;
         while (continue) {
