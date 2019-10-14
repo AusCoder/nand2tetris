@@ -41,22 +41,121 @@ class Screen {
 
     /** Draws the (x,y) pixel, using the current color. */
     function void drawPixel(int x, int y) {
-        var int addr, value, mod;
+        var int addr, value, mod, mask;
         let addr = start + (32 * y) + (x / 16);
-        let mod = x - (x / 16);
+        let mod = x - ((x / 16) * 16);
         let value = Memory.peek(addr);
         // set the (x % 16)th bit of value to color
+        // how do I do this?
+        let mask = 1;
+        while (mod > 0) {
+            let mask = mask + mask;
+            let mod = mod - 1;
+        }
+        // This only turns pixels on!
+        let value = value | mask;
         do Memory.poke(addr, value);
         return;
     }
 
     /** Draws a line from pixel (x1,y1) to pixel (x2,y2), using the current color. */
     function void drawLine(int x1, int y1, int x2, int y2) {
+        var int dx, dy, a, b, diff;
+        var boolean condition;
+        let dx = x2 - x1;
+        let dy = y2 - y1;
+        if (dx = 0) {
+            // Should we use -1 or 0 here?
+            //  -1 => we draw both endpoints, which seems correct
+            // We could optimize a bit to draw whole words at a time
+            while (dy > -1) {
+                do drawPixel(x1, y1 + dy);
+                let dy = dy - 1;
+            }
+            return;
+        }
+        if (dy = 0) {
+            while (dx > -1) {
+                do drawPixel(x1 + dx, y1);
+                let dx = dx - 1;
+            }
+            return;
+        }
+        if (dy < 0) {
+            do drawLine(x2, y2, x1, y1);
+            return;
+        }
+        let a = 0;
+        let b = 0;
+        let diff = 0;
+        // The ratio condition to keep the line on track is:
+        // b / a > dy / dx  === a dy - b dx < 0
+        // so we let diff === a dy - b dx
+        if (dx > 0) {
+            while ((~(a > dx)) & (~(b > dy))) {
+                do drawPixel(x1 + a, y1 + b);
+                if (diff < 0) {
+                    let a = a + 1;
+                    let diff = diff + dy;
+                } else {
+                    let b = b + 1;
+                    let diff = diff - dx;
+                }
+            }
+            return;
+        }
+        // if dx > 0:
+        //     a <= dx
+        // if dx < 0:
+        //     a >= dx
+        //     ie not (a < dx)
+
+        // if -(b / (-a')) > -(dy / (-dx')):
+        // // aka:
+        // if b / (-a') < dy / (-dx'):
+        //     a' = a' + 1
+        //     // or
+        //     a = a - 1
+
+        // TODO: This doesn't work!
+        while ((~(a < dx)) & (~(b > dy))) {
+            do drawPixel(x1 + a, y1 + b);
+            if (diff > 0) {
+                let a = a - 1;
+                let diff = diff + dy;
+            } else {
+                let b = b + 1;
+                let diff = diff - dx;
+            }
+        }
+        return;
     }
 
     /** Draws a filled rectangle whose top left corner is (x1, y1)
      * and bottom right corner is (x2,y2), using the current color. */
     function void drawRectangle(int x1, int y1, int x2, int y2) {
+        // var int addr, value, mod, mask;
+        var int value, mod, addr, y, x;
+        let y = y1;
+        while (y < (y2 + 1)) {
+            let addr = start + 32 * y;
+            let x = x1;
+            let mod = x - ((x / 16) * 16);
+            // let addr = mod + addr;
+            let value = Memory.peek(addr);
+            let value = value | mod;
+            do Memory.poke(addr, value);
+
+            // Do to the nearest 16th in while loop
+            // while (x < (x2 + 1)) {
+
+            // }
+            let y = y + 1;
+        }
+        // let addr = start + (32 * y) + (x / 16);
+        // let mod = x - ((x / 16) * 16);
+        // let value = Memory.peek(addr);
+        return;
     }
 
     /** Draws a filled circle of radius r<=181 around (x,y), using the current color. */

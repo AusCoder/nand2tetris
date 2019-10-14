@@ -252,7 +252,7 @@ class CodeGenerator:
                     code = [f"push {mem_segment} {symbol.index}"]
                     num_args = 1
                 else:
-                    raise CodeGeneratorError(f"Type {symbol.type_} has no subroutines")
+                    raise CodeGeneratorError(f"{term.qualifier.line_num}: Type {symbol.type_} has no subroutines")
             except SymbolNotFoundError:
                 # Static function or constructor
                 subroutine_cls_name = term.qualifier.value
