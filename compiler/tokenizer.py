@@ -89,15 +89,15 @@ def gen_tokens_for_lines(*, lines: Iterable[str]) -> Iterable[Token]:
                 yield tok
 
 
-WHITE_SPACE_REGEX = re.compile(r"^\s*(.*)")
+WHITE_SPACE_REGEX = re.compile(r"^[\s\r]*(.*)")
 INLINE_COMMENT_REGEX = re.compile(r"^//.*")
 MULTILINE_COMMENT_START_REGEX = re.compile(r"^/\*(.*)")
 MULTILINE_COMMENT_END_REGEX = re.compile(r"^.*\*/(.*)")
 
-IDENTIFIER_KEYWORD_REGEX = re.compile(r"^([a-zA-Z_][a-zA-Z_\d]*)\s*(.*)")
-SYMBOL_REGEXS = [re.compile(rf"^({symbol})\s*(.*)") for symbol in VALID_SYMBOLS_ESCAPED]
-INTEGER_CONSTANT_REGEX = re.compile(r"^(\d+)\s*(.*)")
-STRING_CONSTANT_REGEX = re.compile(r"^\"([^\n\"]*)\"\s*(.*)")
+IDENTIFIER_KEYWORD_REGEX = re.compile(r"^([a-zA-Z_][a-zA-Z_\d]*)[\s\r]*(.*)")
+SYMBOL_REGEXS = [re.compile(rf"^({symbol})[\s\r]*(.*)") for symbol in VALID_SYMBOLS_ESCAPED]
+INTEGER_CONSTANT_REGEX = re.compile(r"^(\d+)[\s\r]*(.*)")
+STRING_CONSTANT_REGEX = re.compile(r"^\"([^\n\"]*)\"[\s\r]*(.*)")
 
 REGEXS_WITH_FACTORY = [
     (
@@ -122,7 +122,7 @@ def _parse_token(*, line, line_num, in_comment):
             return None, "", True
 
     line, = WHITE_SPACE_REGEX.match(line).groups()
-    if INLINE_COMMENT_REGEX.match(line):
+    if INLINE_COMMENT_REGEX.match(line) or not line:
         return None, "", False
 
     match = MULTILINE_COMMENT_START_REGEX.match(line)

@@ -19,6 +19,7 @@ class Screen {
         let start = 16384;
         let end = 24576;
         let color = true;
+        return;
     }
 
     /** Erases the entire screen. */
