@@ -25,6 +25,8 @@ class String {
 
     /** Disposes this string. */
     method void dispose() {
+        // TODO: There is an issue in this dispose method
+        // do I need to call dealloc(this)?
         do Memory.deAlloc(chars);
         do Memory.deAlloc(this);
         return;
@@ -124,7 +126,7 @@ class String {
             let tmp = String.int2String(val);
         }
         if (capacity < (tmp.length() + 1)) {
-            do Sys.err(5);
+            do Sys.error(5);
         }
         while (i < tmp.length()) {
             let chars[i] = tmp.charAt(i);
@@ -135,7 +137,7 @@ class String {
             let i = i + 1;
         }
         let length = tmp.length();
-
+        // do tmp.dispose();
         return;
     }
 
