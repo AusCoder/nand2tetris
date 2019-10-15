@@ -11,13 +11,15 @@
  * string-oriented operations.
  */
 class String {
-    field String chars;
+    field Array chars;
     field int length, capacity;
 
     /** constructs a new empty string with a maximum length of maxLength
      *  and initial length of 0. */
     constructor String new(int maxLength) {
-        let chars = Memory.alloc(maxLength);
+        if (maxLength > 0) {
+            let chars = Memory.alloc(maxLength);
+        }
         let length = 0;
         let capacity = maxLength;
         return this;
@@ -27,7 +29,9 @@ class String {
     method void dispose() {
         // TODO: There is an issue in this dispose method
         // do I need to call dealloc(this)?
-        do Memory.deAlloc(chars);
+        if (capacity > 0) {
+            do Memory.deAlloc(chars);
+        }
         do Memory.deAlloc(this);
         return;
     }
@@ -100,55 +104,37 @@ class String {
         return val * mult;
     }
 
-    function String int2String(int val) {
-        var String s;
-        var int lastDigit;
-        var char c;
-        let lastDigit = val - ((val / 10) * 10);
-        let c = lastDigit + 48;
-        if (lastDigit < 10) {
-            let s = String.new(20);
-        } else {
-            let s = String.int2String(val / 10);
-        }
-        return s.appendChar(c);
-    }
-
     /** Sets this string to hold a representation of the given value. */
     method void setInt(int val) {
-        // TODO: needs testing, discovered issue in Math.divide
-        var String tmp;
-        var int i;
+        let length = 0;
 
         if (val < 0) {
-            let tmp = String.int2String(-val);
-        } else {
-            let tmp = String.int2String(val);
+            do appendChar(45);
+            let val = -val;
         }
-        if (capacity < (tmp.length() + 1)) {
-            do Sys.error(5);
+        do _setInt(val);
+        return;
+    }
+
+    method void _setInt(int val) {
+        var int lastDigit;
+
+        if (val > 9) {
+            do _setInt(val / 10);
         }
-        while (i < tmp.length()) {
-            let chars[i] = tmp.charAt(i);
-            let i = i + 1;
-        }
-        while (i < capacity) {
-            let chars[i] = 0;
-            let i = i + 1;
-        }
-        let length = tmp.length();
-        // do tmp.dispose();
+        let lastDigit = val - ((val / 10) * 10);
+        do appendChar(lastDigit + 48);
         return;
     }
 
     /** Returns the new line character. */
     function char newLine() {
-        return 10;
+        return 128;  // 10?
     }
 
     /** Returns the backspace character. */
     function char backSpace() {
-        return 8;
+        return 129;  // 129?
     }
 
     /** Returns the double quote (") character. */
