@@ -16,7 +16,6 @@ EXTRA_OS_LIBS = [
     Path("projects/12/Math.vm"),
     Path("projects/12/Keyboard.vm"),
     Path("projects/12/String.vm"),
-    # Path("projects/12/Screen.vm"),
 ]
 
 

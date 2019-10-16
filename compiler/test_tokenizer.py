@@ -82,15 +82,18 @@ EXPECTED3 = [
     Symbol(value=";", line_num=1),
 ]
 
-EXAMPLE4 = "   \n".split(
-    "\n"
-)
+EXAMPLE4 = "   \n".split("\n")
 EXPECTED4 = []
 
 
 @pytest.mark.parametrize(
     "lines, expected",
-    [(EXAMPLE1, EXPECTED1), (EXAMPLE2, EXPECTED2), (EXAMPLE3, EXPECTED3), (EXAMPLE4, EXPECTED4)],
+    [
+        (EXAMPLE1, EXPECTED1),
+        (EXAMPLE2, EXPECTED2),
+        (EXAMPLE3, EXPECTED3),
+        (EXAMPLE4, EXPECTED4),
+    ],
 )
 def test_gen_tokens_for_lines(lines, expected):
     toks = gen_tokens_for_lines(lines=lines)

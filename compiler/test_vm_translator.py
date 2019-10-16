@@ -1,7 +1,3 @@
-"""This requires pytest:
-
-pip install pytest
-"""
 import pytest
 
 from vm_translator import CommandType, Parser

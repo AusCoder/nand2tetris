@@ -1,7 +1,3 @@
-"""This requires pytest:
-
-pip install pytest
-"""
 import pytest
 
 from assembler import (

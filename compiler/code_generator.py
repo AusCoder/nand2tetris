@@ -85,11 +85,7 @@ class CodeGenerator:
         elif subroutine_type == "constructor":
             size = len([s for s in self._symbol_tables if s.kind == Kind.FIELD])
             code.extend(
-                [
-                    f"push constant {size}",
-                    "call Memory.alloc 1",
-                    "pop pointer 0",
-                ]
+                [f"push constant {size}", "call Memory.alloc 1", "pop pointer 0"]
             )
         is_void_subroutine = (
             isinstance(dec.type_, Keyword) and dec.type_.value == "void"
@@ -252,7 +248,9 @@ class CodeGenerator:
                     code = [f"push {mem_segment} {symbol.index}"]
                     num_args = 1
                 else:
-                    raise CodeGeneratorError(f"{term.qualifier.line_num}: Type {symbol.type_} has no subroutines")
+                    raise CodeGeneratorError(
+                        f"{term.qualifier.line_num}: Type {symbol.type_} has no subroutines"
+                    )
             except SymbolNotFoundError:
                 # Static function or constructor
                 subroutine_cls_name = term.qualifier.value
@@ -262,7 +260,9 @@ class CodeGenerator:
             # Subroutine in current class
             subroutine_cls_name = self._cur_class_name
             dec = next(
-                d for d in self._cur_class.subroutine_decs if d.name.value == term.name.value
+                d
+                for d in self._cur_class.subroutine_decs
+                if d.name.value == term.name.value
             )
             if dec.modifier.value == "method":
                 code = ["push pointer 0"]
